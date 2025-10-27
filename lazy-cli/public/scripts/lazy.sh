@@ -30,19 +30,22 @@ Examples:
       Initialize a Node.js project with init -y and optional boilerplate package installation.
 
   lazy next-js init
-      Scaffold a new Next.js application with recommended defaults and optional packages.
+      Initialize a Next.js application with recommended defaults and optional packages.
 
   lazy vite-js init
-      Create a new Vite project, select framework, and optionally install common packages.
+      Initialize a Vite project, select framework, and optionally install common packages.
 
   lazy react-native init
-      Scaffold a new React Native application with Expo or React Native CLI setup.
+      Initialize a React Native application with Expo or React Native CLI setup.
       
   lazy django init <project_name>
       Create a new Django project with static, templates, and media directories setup.
 
   lazy --version | -v
       Show current LazyCLI version.
+
+  lazy --init | init
+      Interactive selector to choose which project to initialize.
 
   lazy --help | help
       Show this help message.
@@ -60,14 +63,14 @@ Available Commands:
                 - init       Initialize Node.js project with optional boilerplate
 
   next-js       Next.js project scaffolding:
-                - init       Create Next.js app with TypeScript, Tailwind, ESLint defaults
+                - init       Initialize Next.js app with TypeScript, Tailwind, ESLint defaults
 
   vite-js       Vite project scaffolding:
-                - init       Create a Vite project with framework selection and optional packages
+                - init       Initialize a Vite project with template selection and optional packages
 
   react-native  Mobile app development with React Native:
-                - init       Create React Native app with Expo or CLI, navigation, and essential packages
-                  
+                - init       Initialize React Native app with Expo or CLI, navigation, and essential packages
+                
   django        Django project setup:
                 - init <project_name>  Create Django project with static, templates, and media setup
 
@@ -314,7 +317,11 @@ github_create_pr() {
 # Supports: zod, bcrypt, js-cookie, swr, lucide-react, react-hot-toast, shadcn-ui
 next_js_create() {
   echo "🛠️ Creating Next.js app..."
+  echo "ℹ️  Note: For yes/no prompts, use 1=Yes and 0=No"
+  echo
 
+  # ========== STEP 1: COLLECT ALL USER PREFERENCES ==========
+  
   # Ask for project name
   read -p "📦 Enter project name (no spaces): " project_name
   if [[ -z "$project_name" ]]; then
@@ -372,7 +379,8 @@ next_js_create() {
     done
   }
 
-  # Optional packages
+  # Collect all package preferences BEFORE creating project
+  echo "📋 Collecting package preferences..."
   for pkg in \
     "zod:➕ Install zod?" \
     "bcrypt:🔐 Install bcrypt?" \
@@ -388,9 +396,11 @@ next_js_create() {
     eval "ans_${key//-/_}=$answer"
   done
 
+  # ========== STEP 2: CREATE PROJECT ==========
+  
   # Construct Next.js CLI command
   echo ""
-  echo "🚀 Creating Next.js project..."
+  echo "🚀 Creating Next.js project with collected preferences..."
 
   cmd="npx create-next-app@latest \"$project_name\" --yes"
   [[ "$use_ts" == "1" ]] && cmd+=" --typescript" || cmd+=" --no-typescript"
@@ -403,6 +413,11 @@ next_js_create() {
 
   eval "$cmd" || { echo "❌ Failed to create project."; return 1; }
 
+  echo "✅ Next.js app created at ./$project_name"
+  echo ""
+
+  # ========== STEP 3: INSTALL ADDITIONAL PACKAGES ==========
+  
   cd "$project_name" || return 1
 
   # Detect package manager (fallback npm)
@@ -455,6 +470,8 @@ next_js_create() {
 # Vite.js App Creator 
 vite_js_create() {
   echo "🛠️ Creating Vite app for you..."
+  echo "ℹ️  Note: For yes/no prompts, use 1=Yes and 0=No"
+  echo
 
   # --- Project name ---
   read -p "📦 Enter project name (no spaces): " project_name
@@ -465,17 +482,17 @@ vite_js_create() {
 
   # --- Framework selection ---
   echo "✨ Choose a framework:"
-  echo "1) Vanilla"
-  echo "2) React"
-  echo "3) Vue"
-  echo "4) Svelte"
-  read -p "🔧 Enter choice [1-4]: " choice
+  echo "i) Vanilla"
+  echo "ii) React"
+  echo "iii) Vue"
+  echo "iv) Svelte"
+  read -p "🔧 Enter choice [i-iv]: " choice
 
   case $choice in
-    1) framework="vanilla" ;;
-    2) framework="react" ;;
-    3) framework="vue" ;;
-    4) framework="svelte" ;;
+    i) framework="vanilla" ;;
+    ii) framework="react" ;;
+    iii) framework="vue" ;;
+    iv) framework="svelte" ;;
     *) echo "❌ Invalid choice."; return 1 ;;
   esac
 
@@ -668,8 +685,10 @@ EOF
 
 node_js_init() {
   echo "🛠️ Initializing Node.js project..."
+  echo "ℹ️  Note: For yes/no prompts, use 1=Yes and 0=No"
+  echo
 
-  read -p "🤔 Choose setup: 1) Basic JS  2) TypeScript [1/2]: " setup
+  read -p "🤔 Choose setup: i) Basic JS  ii) TypeScript [i/ii]: " setup
   detect_package_manager
   pkg_manager="$PKG_MANAGER"
 
@@ -680,13 +699,13 @@ node_js_init() {
   dev_deps=()
   deps=()
 
-  read -p "➕ Install dotenv? [y/N]: " use_dotenv
-  [[ "$use_dotenv" =~ ^[Yy]$ ]] && deps+=("dotenv")
+  read -p "➕ Install dotenv? [1/0]: " use_dotenv
+  [[ "$use_dotenv" == "1" ]] && deps+=("dotenv")
 
-  read -p "🌀 Use nodemon for auto-reload? [y/N]: " use_nodemon
-  [[ "$use_nodemon" =~ ^[Yy]$ ]] && dev_deps+=("nodemon")
+  read -p "🌀 Use nodemon for auto-reload? [1/0]: " use_nodemon
+  [[ "$use_nodemon" == "1" ]] && dev_deps+=("nodemon")
 
-  if [[ "$setup" == "2" ]]; then
+  if [[ "$setup" == "ii" ]]; then
     echo "🧩 Setting up TypeScript environment..."
     dev_deps+=("typescript" "@types/node" "ts-node")
     mkdir -p src
@@ -735,11 +754,11 @@ EOF
   # Update package.json scripts
   echo "🧠 Configuring package.json scripts..."
   jq --arg start "$start_cmd" \
-     --arg dev "$([[ "$use_nodemon" =~ ^[Yy]$ ]] && echo "nodemon src/index" || echo "$dev_cmd")" \
+     --arg dev "$([[ "$use_nodemon" == "1" ]] && echo "nodemon src/index" || echo "$dev_cmd")" \
      '.scripts = {start: $start, dev: $dev, build: "tsc"}' package.json > package.tmp.json && mv package.tmp.json package.json
 
   # Optional .env
-  if [[ "$use_dotenv" =~ ^[Yy]$ ]]; then
+  if [[ "$use_dotenv" == "1" ]]; then
     echo "🔐 Creating .env file..."
     cat > .env <<EOF
 NODE_ENV=development
@@ -830,6 +849,133 @@ djangoInit() {
 	echo "Django project '$PROJECT_NAME' created with static, templates, and media directories."
 }
 
+# Next.js project scaffolding
+next_js_create() {
+  local project_name="$1"
+  if [[ -z "$project_name" ]]; then
+    read -p "📦 Enter Next.js project name: " project_name
+    [[ -z "$project_name" ]] && echo "❌ Project name is required." && return 1
+  fi
+
+  echo "⚙️ Configure Next.js options (1=yes, 0=no)"
+  read -p "Use TypeScript? (1/0, default 1): " use_ts; use_ts=${use_ts:-1}
+  read -p "Use ESLint? (1/0, default 1): " use_eslint; use_eslint=${use_eslint:-1}
+  read -p "Use Tailwind? (1/0, default 1): " use_tailwind; use_tailwind=${use_tailwind:-1}
+  read -p "Use App Router? (1/0, default 1): " use_app; use_app=${use_app:-1}
+  read -p "Use src/ directory? (1/0, default 0): " use_src; use_src=${use_src:-0}
+  read -p "Use import alias '@/*'? (1/0, default 1): " use_alias; use_alias=${use_alias:-1}
+  read -p "Use Turbopack in dev? (1/0, default 1): " use_turbo; use_turbo=${use_turbo:-1}
+
+  echo "🚀 Creating Next.js project..."
+  local cmd="npx create-next-app@latest \"$project_name\""
+  [[ "$use_ts" == "1" ]] && cmd+=" --typescript" || cmd+=" --no-typescript"
+  [[ "$use_eslint" == "1" ]] && cmd+=" --eslint" || cmd+=" --no-eslint"
+  [[ "$use_tailwind" == "1" ]] && cmd+=" --tailwind" || cmd+=" --no-tailwind"
+  [[ "$use_app" == "1" ]] && cmd+=" --app" || cmd+=" --no-app"
+  [[ "$use_src" == "1" ]] && cmd+=" --src-dir" || cmd+=" --no-src-dir"
+  [[ "$use_alias" == "1" ]] && cmd+=' --import-alias "@/*"' || cmd+=" --no-import-alias"
+  [[ "$use_turbo" == "1" ]] && cmd+=" --turbo" || cmd+=" --no-turbo"
+  cmd+=" --yes"
+
+  eval "$cmd" || { echo "❌ Failed to scaffold Next.js app."; return 1; }
+  echo "✅ Next.js app created at ./$project_name"
+}
+
+# Vite project scaffolding
+vite_js_create() {
+  local project_name="$1"
+  if [[ -z "$project_name" ]]; then
+    read -p "📦 Enter Vite project name: " project_name
+    [[ -z "$project_name" ]] && echo "❌ Project name is required." && return 1
+  fi
+
+  echo "⚙️ Choose framework template"
+  echo "  i) react"
+  echo "  ii) react-ts"
+  echo "  iii) vanilla"
+  echo "  iv) vanilla-ts"
+  read -p "Select [i-iv] (default ii): " choice; choice=${choice:-ii}
+  local template="react-ts"
+  case "$choice" in
+    i) template="react" ;;
+    ii) template="react-ts" ;;
+    iii) template="vanilla" ;;
+    iv) template="vanilla-ts" ;;
+    *) template="react-ts" ;;
+  esac
+
+  echo "🚀 Scaffolding Vite + $template..."
+  npx create-vite "$project_name" --template "$template" || { echo "❌ Vite scaffolding failed."; return 1; }
+
+  cd "$project_name" || return 1
+  detect_package_manager
+  echo "📦 Installing dependencies with $PKG_MANAGER..."
+  if [[ "$PKG_MANAGER" == "npm" ]]; then
+    npm install
+  else
+    $PKG_MANAGER install
+  fi
+  echo "✅ Vite app ready at ./$project_name"
+}
+
+# React Native project scaffolding (Expo or CLI)
+react_native_create() {
+  echo "ℹ️  Note: For yes/no prompts, use 1=Yes and 0=No"
+  echo
+  
+  local project_name="$1"
+  if [[ -z "$project_name" ]]; then
+    read -p "📦 Enter React Native project name: " project_name
+    [[ -z "$project_name" ]] && echo "❌ Project name is required." && return 1
+  fi
+
+  echo "⚙️ Choose setup method"
+  echo "  i) Expo (recommended)"
+  echo "  ii) React Native CLI"
+  read -p "Select [i-ii] (default i): " setup; setup=${setup:-i}
+
+  if [[ "$setup" == "ii" ]]; then
+    echo "🚀 Creating React Native CLI app..."
+    npx react-native init "$project_name" || { echo "❌ React Native CLI setup failed."; return 1; }
+    echo "✅ CLI app created. Use 'npx react-native run-android' or 'run-ios'"
+  else
+    echo "🚀 Creating Expo app..."
+    npx create-expo-app "$project_name" || { echo "❌ Expo setup failed."; return 1; }
+    echo "✅ Expo app created. Run 'cd $project_name && npx expo start'"
+  fi
+}
+
+# Interactive top-level init selector
+lazy_init() {
+  echo "🧰 Select a project to initialize:"
+  echo "  i) Node.js (TypeScript or simple)"
+  echo "  ii) Next.js"
+  echo "  iii) Vite"
+  echo "  iv) Django"
+  echo "  v) React Native"
+  read -p "Choose [i-v]: " choice
+  case "$choice" in
+    i) node_js_init ;;
+    ii) next_js_create ;;
+    iii) vite_js_create ;;
+    iv) read -p "Project name: " pname; [[ -n "$pname" ]] && djangoInit "$pname" || echo "❌ Project name required" ;;
+    v) react_native_create ;;
+    *) echo "❌ Invalid choice"; show_help ;;
+  esac
+}
+
+# Upgrade LazyCLI to latest version
+upgrade_lazycli() {
+  echo "🔄 Upgrading LazyCLI..."
+  rm -f "$HOME/.lazycli/lazy"
+  if ! curl -fsSL https://lazycli.xyz/scripts/lazy.sh -o "$HOME/.lazycli/lazy"; then
+    echo "❌ Failed to download latest LazyCLI script."
+    return 1
+  fi
+  chmod +x "$HOME/.lazycli/lazy"
+  echo "✅ LazyCLI upgraded to latest version!"
+}
+
 # Main CLI router
 case "$1" in
   "init")
@@ -853,12 +999,27 @@ case "$1" in
       *) echo "❌ Unknown node-js subcommand: $2"; show_help; exit 1 ;;
     esac
     ;;
-
   "next-js")
     case "$2" in
-      "init") next_js_init ;;
+      "init") shift 2; next_js_create "$@" ;;
       *) echo "❌ Unknown next-js subcommand: $2"; show_help; exit 1 ;;
     esac
+    ;;
+  "vite-js")
+    case "$2" in
+      "init") shift 2; vite_js_create "$@" ;;
+      *) echo "❌ Unknown vite-js subcommand: $2"; show_help; exit 1 ;;
+    esac
+    ;;
+  "react-native")
+    case "$2" in
+      "init") shift 2; react_native_create "$@" ;;
+      *) echo "❌ Unknown react-native subcommand: $2"; show_help; exit 1 ;;
+    esac
+    ;;
+  "djangoinit")
+    shift
+    djangoInit "$@"
     ;;
 
   "vite-js")
@@ -881,8 +1042,13 @@ case "$1" in
       *) echo "❌ Unknown django subcommand: $2"; show_help; exit 1 ;;
     esac
     ;;
-
-  "--version" | "version" | "-v")
+  "upgrade")
+    upgrade_lazycli || exit 1
+    ;;
+  "init"|"--init")
+    lazy_init
+    ;;
+  "--version"|"version"|"-v")
     echo "LazyCLI version $VERSION"
     ;;
 
